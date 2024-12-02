@@ -108,3 +108,42 @@ class TAGEPredictor:
         # Insert a new entry in the first available table
         tag = (pc >> self.history_lengths[0]) % self.table_size
         self.components[0][tag] = 1 if taken else -1
+        
+class GshareFastPredictor:
+    def __init__(self, history_bits, table_size=1024):
+        self.history_bits = history_bits
+        self.GHR = 0  # Global History Register
+        self.PHT = [1] * table_size  # Pattern History Table with 2-bit counters
+        self.pipeline_registers = [{"pc": None, "index": None, "taken": None} for _ in range(3)]  # Independent registers
+
+    def predict(self, pc):
+        # Stage 1: Compute index
+        index = (pc ^ self.GHR) % len(self.PHT)
+        self.pipeline_registers[0] = {"pc": pc, "index": index, "taken": None}
+
+        # Pass through the pipeline stages
+        for i in range(len(self.pipeline_registers) - 1, 0, -1):
+            self.pipeline_registers[i] = self.pipeline_registers[i - 1]
+
+        # Stage 2: Perform prediction
+        if self.pipeline_registers[1]["index"] is not None:
+            self.pipeline_registers[1]["taken"] = self.PHT[self.pipeline_registers[1]["index"]] >= 2
+
+        # Stage 3: Output prediction result
+        if self.pipeline_registers[2]["taken"] is not None:
+            return self.pipeline_registers[2]["taken"]
+
+        # Default to "not taken" if pipeline is not filled
+        return False
+
+    def update(self, pc, taken):
+        # Use the output of stage 2 for updating the predictor
+        if self.pipeline_registers[2]["index"] is not None:
+            index = self.pipeline_registers[2]["index"]
+            if taken:
+                self.PHT[index] = min(self.PHT[index] + 1, 3)  # Increase counter
+            else:
+                self.PHT[index] = max(self.PHT[index] - 1, 0)  # Decrease counter
+
+            # Update the Global History Register
+            self.GHR = ((self.GHR << 1) | taken) & ((1 << self.history_bits) - 1)
