@@ -1,5 +1,5 @@
 import os
-from predictors import GsharePredictor, PerceptronPredictor, LocalHistoryPredictor, TAGEPredictor
+from predictors import GsharePredictor, PerceptronPredictor, LocalHistoryPredictor, TAGEPredictor, GshareFastPredictor
 from pipeline import Pipeline
 from metrics import PerformanceMetrics
 from traces import realistic_trace_generator, load_traces_with_defined_paths
@@ -9,7 +9,8 @@ predictors = [
     GsharePredictor(history_bits=4),  # Gshare Predictor
     PerceptronPredictor(num_weights=128, history_length=8),  # Perceptron Predictor
     LocalHistoryPredictor(history_bits=4),  # Local History Predictor
-    TAGEPredictor()  # TAGE Predictor
+    TAGEPredictor(),  # TAGE Predictor
+    GshareFastPredictor(history_bits=4),  # GshareFast Predictor
 ]
 
 # Simulate and evaluate predictors on synthetic traces
